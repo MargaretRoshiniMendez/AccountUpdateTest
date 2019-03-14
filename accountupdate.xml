@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:context="http://www.springframework.org/schema/context" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/sfdc http://www.mulesoft.org/schema/mule/sfdc/current/mule-sfdc.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-current.xsd">
+    <file:connector name="File" readFromDirectory="C:\Users\m.roshini.mendez\Documents\MulePractice" autoDelete="true" streaming="true" validateConnections="true" doc:name="File"/>
+    <sfdc:config name="Salesforce__Basic_Authentication" username="${a.username}" password="${b.password}" securityToken="${c.token}" doc:name="Salesforce: Basic Authentication"/>
+    <context:property-placeholder location="Salesforce-${env}.properties"/>
+    <flow name="accountupdateFlow">
+        <file:inbound-endpoint path="C:\Users\m.roshini.mendez\Documents\MulePractice" connector-ref="File" responseTimeout="10000" doc:name="File"/>
+        <byte-array-to-object-transformer doc:name="Byte Array to Object"/>
+        <dw:transform-message doc:name="Transform Message" metadata:id="44a85f7c-091b-4d98-bb32-ca0222a79e6c">
+            <dw:input-payload doc:sample="C:\Users\m.roshini.mendez\Documents\Accounts.csv" mimeType="application/csv"/>
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+payload map ((payload01 , indexOfPayload01) -> {
+	Id: payload01.Id,
+	Name: payload01.Name,
+	AccountNumber: payload01.AccountNumber,
+	Description: payload01.Description,
+	YearStarted: payload01.YearStarted
+})]]></dw:set-payload>
+        </dw:transform-message>
+        <flow-ref name="accountupdateSub_Flow" doc:name="Flow Reference"/>
+        <logger message="#[payload]" level="INFO" doc:name="Logger"/>
+    </flow>
+    <sub-flow name="accountupdateSub_Flow">
+        <sfdc:update config-ref="Salesforce__Basic_Authentication" type="Account" doc:name="Salesforce">
+            <sfdc:objects ref="#[payload]"/>
+        </sfdc:update>
+    </sub-flow>
+</mule>
